@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Par ou Ímpar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ===========================
+       RESET & BASE
+       =========================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:            #1a1a1e;
+      --bg-card:       #222228;
+      --bg-stat:       #2a2a32;
+      --border:        rgba(255, 255, 255, 0.07);
+      --border-hover:  rgba(255, 255, 255, 0.14);
+
+      --text-primary:   #f0eff4;
+      --text-secondary: #8a8a9a;
+      --text-muted:     #55556a;
+
+      --accent:         #7c6af7;
+      --accent-glow:    rgba(124, 106, 247, 0.25);
+
+      --win:            #2aad6e;
+      --win-bg:         rgba(42, 173, 110, 0.12);
+      --lose:           #e05555;
+      --lose-bg:        rgba(224, 85, 85, 0.12);
+
+      --dot-empty:      rgba(255,255,255,0.1);
+      --dot-filled:     #7c6af7;
+
+      --radius-sm:  6px;
+      --radius-md:  10px;
+      --radius-lg:  16px;
+      --radius-xl:  22px;
+
+      --font-display: 'Syne', sans-serif;
+      --font-mono:    'Space Mono', monospace;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .header { text-align: center; padding-bottom: 0.25rem; }
+
+    .title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--bg-stat);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2rem 1.75rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 120px;
+      background: var(--accent-glow);
+      border-radius: 50%;
+      filter: blur(40px);
+      pointer-events: none;
+    }
+
+    .number-display {
+      font-family: var(--font-mono);
+      font-size: 5.5rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-primary);
+      line-height: 1;
+      margin: 0.5rem 0 1rem;
+      letter-spacing: -3px;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease;
+    }
+
+    .number-display.win  { color: var(--win); }
+    .number-display.lose { color: var(--lose); }
+
+    .streak-track {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--dot-empty);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .dot.filled {
+      background: var(--dot-filled);
+      box-shadow: 0 0 8px var(--accent-glow);
+      border-color: var(--accent);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .choice-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      font-family: var(--font-display);
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      background: rgba(255,255,255,0.07);
+      border-color: var(--border-hover);
+    }
+
+    .choice-btn:active:not(:disabled) { transform: scale(0.97); }
+    .choice-btn:disabled { opacity: 0.35; cursor: default; }
+
+    .btn-icon { font-size: 1.4rem; line-height: 1; color: var(--text-secondary); }
+    .btn-label { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; }
+
+    .feedback-box {
+      min-height: 48px;
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      color: var(--text-secondary);
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      margin-bottom: 1rem;
+    }
+
+    .feedback-box.win {
+      background: var(--win-bg);
+      color: var(--win);
+      border-color: rgba(42, 173, 110, 0.25);
+    }
+
+    .feedback-box.lose {
+      background: var(--lose-bg);
+      color: var(--lose);
+      border-color: rgba(224, 85, 85, 0.25);
+    }
+
+    .penalty-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 1rem;
+      letter-spacing: 0.2px;
+    }
+
+    .penalty-info strong { color: var(--text-secondary); font-family: var(--font-mono); }
+    .sep { margin: 0 6px; opacity: 0.4; }
+
+    .progress-wrap { display: flex; flex-direction: column; gap: 6px; }
+
+    .progress-bar {
+      height: 5px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+      font-family: var(--font-mono);
+    }
+
+    .game-over {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 0;
+      text-align: center;
+    }
+
+    .game-over.visible { display: flex; }
+    .go-icon { font-size: 3rem; line-height: 1; }
+
+    .go-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .go-score { font-size: 0.95rem; color: var(--text-secondary); font-family: var(--font-mono); }
+
+    .restart-btn {
+      margin-top: 0.5rem;
+      padding: 0.75rem 2rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.15s, transform 0.1s;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .restart-btn:hover  { opacity: 0.88; }
+    .restart-btn:active { transform: scale(0.97); }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .number-display { font-size: 4rem; }
+      .title { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <main class="container">
+    <header class="header">
+      <h1 class="title">Par ou Ímpar</h1>
+      <p class="subtitle">90 tentativas. Cada erro cobra o preço.</p>
+    </header>
+
+    <section class="stats-grid" aria-label="Estatísticas">
+      <div class="stat-card">
+        <span class="stat-label">Pontuação</span>
+        <span class="stat-value" id="score">0.0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Sequência</span>
+        <span class="stat-value" id="streak">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Erros (ciclo)</span>
+        <span class="stat-value" id="errors">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Tentativas</span>
+        <span class="stat-value" id="attempts">0/90</span>
+      </div>
+    </section>
+
+    <section class="game-card" aria-label="Área do jogo">
+      <div id="game-area">
+        <div class="number-display" id="number-display" aria-live="polite">?</div>
+
+        <div class="streak-track" aria-label="Sequência de acertos">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="choice-btn" id="btn-even" aria-label="Escolher par" onclick="choose('even')">
+            <span class="btn-icon">=</span>
+            <span class="btn-label">Par</span>
+          </button>
+          <button class="choice-btn" id="btn-odd" aria-label="Escolher ímpar" onclick="choose('odd')">
+            <span class="btn-icon">∞</span>
+            <span class="btn-label">Ímpar</span>
+          </button>
+        </div>
+
+        <div class="feedback-box" id="feedback" aria-live="assertive">
+          Escolha par ou ímpar!
+        </div>
+
+        <div class="penalty-info">
+          Penalidade atual: <strong id="penalty-display">4.0</strong> pts
+          <span class="sep">|</span>
+          Mínimo: <strong>3.3</strong> pts
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="90" aria-valuenow="0">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <span class="progress-label" id="progress-label">0 / 90 tentativas</span>
+        </div>
+      </div>
+
+      <div class="game-over" id="game-over" aria-live="polite">
+        <div class="go-icon" id="go-icon">🏆</div>
+        <h2 class="go-title" id="go-title">Fim de jogo!</h2>
+        <p class="go-score" id="go-score"></p>
+        <button class="restart-btn" onclick="restart()">Jogar novamente</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===========================
+    // CONSTANTES
+    // ===========================
+    const MAX_ATTEMPTS    = 90;
+    const WIN_POINTS      = 4;
+    const BASE_PENALTY    = 4.0;
+    const MIN_PENALTY     = 3.3;
+    const STREAK_RESET_AT = 6;
+
+    // ===========================
+    // ESTADO DO JOGO
+    // ===========================
+    let state = {};
+
+    function createInitialState() {
+      return {
+        score:         0,
+        streak:        0,
+        totalErrors:   0,
+        attempts:      0,
+        penalty:       BASE_PENALTY,
+        currentNumber: null,
+        locked:        false,
+      };
+    }
+
+    // ===========================
+    // LÓGICA DO JOGO
+    // ===========================
+
+    function nextRound() {
+      state.currentNumber = Math.floor(Math.random() * 101);
+      state.locked = false;
+
+      setNumberDisplay('?', '');
+      setFeedback('Escolha par ou ímpar!', '');
+      setButtonsDisabled(false);
+      renderStats();
+    }
+
+    function choose(choice) {
+      if (state.locked || state.attempts >= MAX_ATTEMPTS) return;
+
+      state.locked = true;
+      state.attempts++;
+      setButtonsDisabled(true);
+
+      const num     = state.currentNumber;
+      const isEven  = num % 2 === 0;
+      const correct = (choice === 'even') === isEven;
+      const parity  = isEven ? 'par' : 'ímpar';
+
+      setNumberDisplay(num, correct ? 'win' : 'lose');
+
+      if (correct) {
+        handleCorrect(num, parity);
+      } else {
+        handleWrong(num, parity);
+      }
+
+      renderStats();
+
+      if (state.attempts >= MAX_ATTEMPTS) {
+        setTimeout(showGameOver, 1200);
+      } else {
+        setTimeout(nextRound, 1400);
+      }
+    }
+
+    function handleCorrect(num, parity) {
+      state.score  += WIN_POINTS;
+      state.streak += 1;
+
+      if (state.penalty > MIN_PENALTY) {
+        const overage   = parseFloat(((state.penalty - BASE_PENALTY) / 0.1).toFixed(6));
+        const reduction = 0.1 + (Math.max(0, overage) * 0.1);
+        state.penalty   = Math.max(MIN_PENALTY, round2(state.penalty - reduction));
+      }
+
+      let msg = `Correto! ${num} é ${parity}. +${WIN_POINTS} pts`;
+
+      if (state.streak >= STREAK_RESET_AT) {
+        state.totalErrors = 0;
+        state.streak      = 0;
+        msg += ' — 6 acertos seguidos! Erros resetados!';
+      }
+
+      setFeedback(msg, 'win');
+    }
+
+    function handleWrong(num, parity) {
+      const penaltyApplied = state.penalty;
+      state.score       -= penaltyApplied;
+      state.streak       = 0;
+      state.totalErrors += 1;
+
+      const x = state.totalErrors;
+
+      if (state.penalty <= MIN_PENALTY) {
+        const extra   = round2(0.05 + x * 0.1);
+        state.penalty = round2(MIN_PENALTY + 0.1 + extra);
+      } else {
+        state.penalty = round2(state.penalty + 0.1);
+      }
+
+      setFeedback(`Errou! ${num} é ${parity}. -${penaltyApplied.toFixed(1)} pts`, 'lose');
+    }
+
+    // ===========================
+    // RENDERIZAÇÃO
+    // ===========================
+
+    function renderStats() {
+      document.getElementById('score').textContent    = state.score.toFixed(1);
+      document.getElementById('streak').textContent   = state.streak;
+      document.getElementById('errors').textContent   = state.totalErrors;
+      document.getElementById('attempts').textContent = `${state.attempts}/${MAX_ATTEMPTS}`;
+      document.getElementById('penalty-display').textContent = state.penalty.toFixed(1);
+
+      const pct = (state.attempts / MAX_ATTEMPTS) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-fill').setAttribute('aria-valuenow', state.attempts);
+      document.getElementById('progress-label').textContent = `${state.attempts} / ${MAX_ATTEMPTS} tentativas`;
+
+      document.querySelectorAll('.dot').forEach((dot, i) => {
+        dot.classList.toggle('filled', i < state.streak);
+      });
+    }
+
+    function setNumberDisplay(value, cssClass) {
+      const el = document.getElementById('number-display');
+      el.textContent = value;
+      el.className   = 'number-display' + (cssClass ? ' ' + cssClass : '');
+    }
+
+    function setFeedback(message, cssClass) {
+      const el = document.getElementById('feedback');
+      el.textContent = message;
+      el.className   = 'feedback-box' + (cssClass ? ' ' + cssClass : '');
+    }
+
+    function setButtonsDisabled(disabled) {
+      document.getElementById('btn-even').disabled = disabled;
+      document.getElementById('btn-odd').disabled  = disabled;
+    }
+
+    function showGameOver() {
+      document.getElementById('game-area').style.display = 'none';
+      const goEl = document.getElementById('game-over');
+      goEl.classList.add('visible');
+
+      const won = state.score >= 0;
+      document.getElementById('go-icon').textContent  = won ? '🏆' : '💀';
+      document.getElementById('go-title').textContent = won ? 'Parabéns!' : 'Fim de jogo!';
+      document.getElementById('go-score').textContent =
+        `Pontuação final: ${state.score.toFixed(1)} pts em ${MAX_ATTEMPTS} tentativas`;
+    }
+
+    // ===========================
+    // CONTROLE
+    // ===========================
+
+    function restart() {
+      document.getElementById('game-area').style.display = 'block';
+      document.getElementById('game-over').classList.remove('visible');
+      init();
+    }
+
+    function init() {
+      state = createInitialState();
+      renderStats();
+      nextRound();
+    }
+
+    function round2(value) {
+      return Math.round(value * 100) / 100;
+    }
+
+    init();
+  </script>
+</body>
+</html>
