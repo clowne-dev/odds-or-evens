@@ -22,3 +22,5 @@ Even or Odd game with a dynamic scoring and penalty system.
 | 6 consecutive correct answers | Loop error counter **resets** |
 
 The game lasts **90 attempts**.
+
+Game link: https://clowne-dev.github.io/odds-or-evens/
